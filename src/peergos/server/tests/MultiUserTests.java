@@ -474,18 +474,22 @@ public class MultiUserTests {
         // make u1 friend all users
         PeergosNetworkUtils.friendBetweenGroups(Arrays.asList(u1), userContexts);
 
-        // upload a file to u1's space
         FileWrapper u1Root = u1.getUserRoot().get();
         String subdirName = "subdir";
         u1Root.mkdir(subdirName, u1.network, false, crypto).get();
-        Path subdirPath = Paths.get(u1.username, subdirName);
 
-        Path filePath = Paths.get(u1.username, subdirName);
+        Path subDirPath = Paths.get(u1.username, subdirName);
 
-        shareFunction.apply(u1, userContexts, filePath).join();
+        shareFunction.apply(u1, userContexts, subDirPath).join();
+
+        for(UserContext friend : userContexts) {
+            Path dirPath = Paths.get(u1.username, subdirName);
+            FileWrapper sharedDir = friend.getByPath(dirPath).get().get();
+            Assert.assertTrue("shared directory name", sharedDir.getFileProperties().name.equals(subdirName));
+        }
 
         //rename directory
-        FileWrapper theDir = u1.getByPath(filePath).get().get();
+        FileWrapper theDir = u1.getByPath(subDirPath).get().get();
         FileWrapper parentFolder = u1.getUserRoot().get();
 
         AbsoluteCapability cap = theDir.getPointer().capability;
@@ -495,12 +499,19 @@ public class MultiUserTests {
         String newDirectoryName = "newDir";
         theDir.rename(newDirectoryName, parentFolder, false, u1).get();
 
-        filePath = Paths.get(u1.username, newDirectoryName);
-        theDir = u1.getByPath(filePath).get().get();
+        subDirPath = Paths.get(u1.username, newDirectoryName);
+        theDir = u1.getByPath(subDirPath).get().get();
         cap = theDir.getPointer().capability;
 
         Set<String> sharedAccessWithAfter = u1.sharedWithCache.getSharedWith(sharedWithAccess, cap);
         Assert.assertTrue("directory shared", ! sharedAccessWithAfter.isEmpty());
+
+        for(UserContext friend : userContexts) {
+            //Path oldSubDirPath = Paths.get(u1.username, subdirName);
+            subDirPath = Paths.get(u1.username, newDirectoryName);
+            FileWrapper sharedDir = friend.getByPath(subDirPath).get().get();
+            Assert.assertTrue("renamed shared directory name", sharedDir.getFileProperties().name.equals(newDirectoryName));
+        }
     }
 
     @Test
