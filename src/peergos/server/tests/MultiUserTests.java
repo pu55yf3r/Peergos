@@ -903,14 +903,8 @@ public class MultiUserTests {
         PeergosNetworkUtils.shareFolderForWriteAccess(network, network, 2, random);
     }
 
-    @Test
-    public void acceptAndReciprocateFollowRequest() throws Exception {
-        String username1 = random();
-        String password1 = random();
-        UserContext u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
-        String username2 = random();
-        String password2 = random();
-        UserContext u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+    //u2 to u1
+    public void acceptAndReciprocateFollowRequest(UserContext u1, String password1, UserContext u2, String password2) throws Exception {
         u2.sendFollowRequest(u1.username, SymmetricKey.random()).get();
         List<FollowRequestWithCipherText> u1Requests = u1.processFollowRequests().get();
         assertTrue("Receive a follow request", u1Requests.size() > 0);
@@ -926,23 +920,169 @@ public class MultiUserTests {
 
         assertTrue("Browse to friend root", children.isEmpty());
 
-        SocialState u1Social = PeergosNetworkUtils.ensureSignedUp(username1, password1, network.clear(), crypto)
+        SocialState u1Social = PeergosNetworkUtils.ensureSignedUp(u1.username, password1, network.clear(), crypto)
                 .getSocialState().get();
 
         Set<String> u1Following = u1Social.followingRoots.stream().map(f -> f.getName())
                 .collect(Collectors.toSet());
         assertTrue("Following correct", u1Following.contains(u2.username));
-        assertTrue("Followers correct", u1Social.followerRoots.containsKey(username2));
+        assertTrue("Followers correct", u1Social.followerRoots.containsKey(u2.username));
 
-        SocialState u2Social = PeergosNetworkUtils.ensureSignedUp(username2, password2, network.clear(), crypto)
+        SocialState u2Social = PeergosNetworkUtils.ensureSignedUp(u2.username, password2, network.clear(), crypto)
                 .getSocialState().get();
 
         Set<String> u2Following = u2Social
                 .followingRoots.stream().map(f -> f.getName())
                 .collect(Collectors.toSet());
         assertTrue("Following correct", u2Following.contains(u1.username));
-        assertTrue("Followers correct", u2Social.followerRoots.containsKey(username1));
+        assertTrue("Followers correct", u2Social.followerRoots.containsKey(u1.username));
     }
+
+    @Test
+    public void senderUnFollows() throws Exception {
+        String username1 = "user1";
+        String password1 = random();
+        UserContext u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
+        String username2 = "user2";
+        String password2 = random();
+        UserContext u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+
+        acceptAndReciprocateFollowRequest(u1, password1, u2, password2);
+
+        u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+        u2.removeFollower(u1.username).get();
+
+        SocialState u1Social = u1.getSocialState().get();
+        assertTrue("u1 no longer following u2", u1Social.followingRoots.isEmpty());
+
+        SocialState u2Social = u2.getSocialState().get();
+        assertTrue("u2 now has no followers", u2Social.followerRoots.isEmpty());
+    }
+
+    @Test
+    public void receiverUnFollows() throws Exception {
+        String username1 = random();
+        String password1 = random();
+        UserContext u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
+        String username2 = random();
+        String password2 = random();
+        UserContext u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+
+        acceptAndReciprocateFollowRequest(u1, password1, u2, password2);
+
+        u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
+        u1.unfollow(u2.username).get();
+
+        SocialState u1Social = u1.getSocialState().get();
+        assertTrue("No longer following u2", u1Social.followingRoots.isEmpty());
+
+        SocialState u2Social = u2.getSocialState().get();
+        assertTrue("u2 by design thinks u1 is still following", !u2Social.followerRoots.isEmpty()); //Fails
+    }
+
+    @Test
+    public void followUnFollowFollow() throws Exception {
+        String username1 = random();
+        String password1 = random();
+        UserContext u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
+        String username2 = random();
+        String password2 = random();
+        UserContext u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+
+        acceptAndReciprocateFollowRequest(u1, password1, u2, password2);
+
+        u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
+        u1.unfollow(u2.username).get();
+        u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+        u2.unfollow(u1.username).get();
+
+        acceptAndReciprocateFollowRequest(u1, password1, u2, password2); //FAILS
+    }
+
+
+    private Pair<UserContext, UserContext> friendRequestSentAcceptedButNotReciprocated() throws Exception {
+        String username1 = "user1";
+        String password1 = random();
+        UserContext u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
+        String username2 = "user2";
+        String password2 = random();
+        UserContext u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
+
+        u1.sendFollowRequest(u2.username, SymmetricKey.random()).get();
+        List<FollowRequestWithCipherText> u2Requests = u2.processFollowRequests().get();
+        assertTrue("Receive a follow request", u2Requests.size() > 0);
+        u2.sendReplyFollowRequest(u2Requests.get(0), true, false).get();
+
+        SocialState u2Social = u2.getSocialState().get();
+
+        Set<String> followerNames = u2Social.followerRoots.keySet();
+        List<String> followeeNames = u2Social.followingRoots.stream().map(f -> f.getFileProperties().name).collect(Collectors.toList());
+        List<String> friendNames = followerNames.stream().filter(x -> followeeNames.contains(x)).collect(Collectors.toList());
+
+        assertTrue("Should not have a follower until u1 accepts!", followerNames.isEmpty());
+
+
+        List<FollowRequestWithCipherText> u1FollowRequests = u1.processFollowRequests().get();
+
+        Optional<FileWrapper> u1ToU2 = u1.getByPath("/" + u2.username).get();
+        assertTrue("Friend root present after accepted follow request", u1ToU2.isPresent());
+
+        SocialState u1Social = PeergosNetworkUtils.ensureSignedUp(username1, password1, network.clear(), crypto)
+                .getSocialState().get();
+
+        Set<String> u1Following = u1Social.followingRoots.stream().map(f -> f.getName())
+                .collect(Collectors.toSet());
+        assertTrue("Following correct", u1Following.contains(u2.username));
+        assertTrue("Followers correct", !u1Social.followerRoots.containsKey(username2));
+
+        u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network.clear(), crypto);
+        u2Social = u2.getSocialState().get();
+
+
+        assertTrue("should of removed pending outgoing follow request"
+                , ! u2Social.pendingOutgoingFollowRequests.entrySet().contains(u1.username));
+
+        Set<String> u2Following = u2Social
+                .followingRoots.stream().map(f -> f.getName())
+                .collect(Collectors.toSet());
+        assertTrue("Following correct", ! u2Following.contains(u1.username));
+        assertTrue("Followers correct", u2Social.followerRoots.containsKey(username1)); //fails!
+        return new Pair<>(u1, u2);
+    }
+
+    @Test
+    public void senderUnFollowsNotReciprocated() throws Exception {
+        Pair<UserContext, UserContext> u1AndU2 = friendRequestSentAcceptedButNotReciprocated();
+        UserContext u1 = u1AndU2.left;
+        UserContext u2 = u1AndU2.right;
+
+        u1.unfollow(u2.username).get();
+
+        SocialState u1Social = u1.getSocialState().get();
+        assertTrue("No longer following u2", u1Social.followingRoots.isEmpty());
+
+        SocialState u2Social = u2.getSocialState().get();
+        assertTrue("u2 by design thinks u1 is still following", !u2Social.followerRoots.isEmpty()); //Fails
+
+    }
+
+    @Test
+    public void receiverUnFollowsNotReciprocated() throws Exception {
+        Pair<UserContext, UserContext> u1AndU2 = friendRequestSentAcceptedButNotReciprocated();
+        UserContext u1 = u1AndU2.left;
+        UserContext u2 = u1AndU2.right;
+
+        u2.removeFollower(u1.username).get();
+
+        SocialState u1Social = u1.getSocialState().get();
+        assertTrue("u1 no longer following u2", u1Social.followingRoots.isEmpty());
+
+        SocialState u2Social = u2.getSocialState().get();
+        assertTrue("u2 now has no followers", u2Social.followerRoots.isEmpty());
+
+    }
+
+
 
     @Test
     public void verifyFriend() {
@@ -1049,6 +1189,10 @@ public class MultiUserTests {
 
         Optional<FileWrapper> u2Tou1 = u1.getByPath("/" + u2.username).get();
         assertTrue("Friend root not present after non reciprocated follow request", !u2Tou1.isPresent());
+
+        SocialState u2Social = u2.getSocialState().get();
+        assertTrue("Friend should not have pending incoming follow requests after follow request is denied", u2Social.pendingIncoming.isEmpty());
+
     }
 
     @Test
