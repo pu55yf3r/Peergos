@@ -8,10 +8,7 @@ import peergos.shared.util.ProgressConsumer;
 import peergos.shared.util.Serialize;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -79,10 +76,14 @@ public class PeergosFileSystemImpl implements FileSystem {
         Set<String> userSet = Stream.of(user).collect(Collectors.toSet());
         switch (permission) {
             case READ:
-                userContext.shareReadAccessWith(path, userSet).join();
+                if(! userContext.shareReadAccessWith(path, userSet).join()){
+                    throw new Error("unable to grant read access");
+                }
                 return;
             case WRITE:
-                userContext.shareWriteAccessWith(path, userSet).join();
+                if(! userContext.shareWriteAccessWith(path, userSet).join()){
+                    throw new Error("unable to grant write access");
+                }
                 return;
         }
         throw new IllegalStateException();
