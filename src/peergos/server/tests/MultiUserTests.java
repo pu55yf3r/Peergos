@@ -961,10 +961,10 @@ public class MultiUserTests {
 
     @Test
     public void receiverUnFollows() throws Exception {
-        String username1 = random();
+        String username1 = "user1-" + random().substring(10);
         String password1 = random();
         UserContext u1 = PeergosNetworkUtils.ensureSignedUp(username1, password1, network, crypto);
-        String username2 = random();
+        String username2 = "user2-" + random().substring(10);
         String password2 = random();
         UserContext u2 = PeergosNetworkUtils.ensureSignedUp(username2, password2, network, crypto);
 
