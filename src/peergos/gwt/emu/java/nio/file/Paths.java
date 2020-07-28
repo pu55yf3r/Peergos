@@ -12,7 +12,6 @@ public class Paths {
     private static final String ERROR_MSG_VARARGS = "Paths.get() does not support varargs";
     private static final String ERROR_MSG_UNINITIALISED = "Paths.get() does not support uninitialised path string";
 
-    @JsMethod
     public static Path get(String firstPath, String... pathString) {
         if (firstPath == null) {
             throw new IllegalArgumentException(ERROR_MSG_NULL_PATH);

@@ -395,10 +395,15 @@ public class PeergosNetworkUtils {
 
         FileSharedWithState result = sharer.sharedWith(p).join();
         Assert.assertTrue(result.readAccess.size() == 0 && result.writeAccess.size() == 0);
+        FileWrapper file = sharer.getByPath(p).join().get();
 
-        sharer.shareReadAccessWith(p, Collections.singleton(sharee.username)).join();
+        String[] readArray = new String[] { sharee.username};
+        sharer.shareReadAccessWith(file, p.toString(), readArray).join();
         result = sharer.sharedWith(p).join();
         Assert.assertTrue(result.readAccess.size() == 1);
+        SharedWithState state = sharer.getDirectorySharingState(p.getParent()).join();
+        FileSharedWithState fileState = state.get(folderName);
+        Assert.assertTrue(fileState.readAccess.size() == 1);
 
         sharer.shareWriteAccessWith(p, Collections.singleton(sharee2.username)).join();
 
