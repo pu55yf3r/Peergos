@@ -455,7 +455,9 @@ public class PeergosNetworkUtils {
 
         u1Root = sharer.getUserRoot().get();
         FileWrapper file = sharer.getByPath(p).join().get();
-        file.rename("renamed", u1Root, p, sharer).join();
+        String renamedFolderName= "renamed";
+        file.rename(renamedFolderName, u1Root, p, sharer).join();
+        p = Paths.get(sharerUsername, renamedFolderName);
 
         sharer.unShareReadAccess(p, Set.of(sharee.username)).join();
         result = sharer.sharedWith(p).join();
