@@ -33,12 +33,9 @@ public class SharedWithState implements Cborable {
 
     @JsMethod
     public FileSharedWithState get(String filename) {
-        FileSharedWithState item = new FileSharedWithState(
+        return new FileSharedWithState(
                 readShares.getOrDefault(filename, Collections.emptySet()),
                 writeShares.getOrDefault(filename, Collections.emptySet()));
-        System.out.println("kev-SharedWithState filename=" + filename + " readShares.size=" + item.readAccess.size()
-                + " writeShares.size=" + item.writeAccess.size());
-        return item;
     }
 
     public Optional<SharedWithState> filter(String childName) {
@@ -148,7 +145,6 @@ public class SharedWithState implements Cborable {
         Map<String, Set<String>> writehares = w.getMap(
                 getString,
                 c -> new HashSet<>(((CborObject.CborList)c).map(getString)));
-        System.out.println("KEV-fromCbor readShares.size=" + readShares.size() + " writeshares.size=" + writehares.size());
         return new SharedWithState(readShares, writehares);
     }
 }

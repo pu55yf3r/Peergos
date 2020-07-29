@@ -50,7 +50,6 @@ public class SharedWithCache {
 
     private CompletableFuture<Optional<Pair<FileWrapper, SharedWithState>>> retrieveWithFile(Path dir) {
         Path path = cacheBase.resolve(toRelative(dir)).resolve(DIR_CACHE_FILENAME);
-        System.out.println("KEV path=" + path.toString());
         return retriever.apply(path)
                 .thenCompose(opt -> opt.isEmpty() ?
                         Futures.of(Optional.empty()) :
@@ -116,24 +115,15 @@ public class SharedWithCache {
     }
 
     public CompletableFuture<SharedWithState> getDirSharingState(Path dir) {
-        System.out.println("kev-getDirSharingState dir=" + dir.toString());
         return retriever.apply(cacheBase)
                 .thenCompose(opt -> opt.isEmpty() ?
                         initializeCache() :
                         Futures.of(opt.get())
                 ).thenCompose(cacheRoot -> {
                     Path path = cacheBase.resolve(dir).resolve(DIR_CACHE_FILENAME);
-                    System.out.println("kev-getDirSharingState resolvedPath=" + path.toString());
                     return retriever.apply(path);
-                })
-                .thenCompose(fopt -> {
-                    if(fopt.isPresent()) {
-                        FileWrapper fw = fopt.get();
-                        String filename = fw.getFileProperties().name;
-                        System.out.println("kev-getDirSharingState filename=" + filename);
-                    }
-                    return fopt.map(this::parseCacheFile).orElse(Futures.of(SharedWithState.empty()));
-                });
+                }).thenCompose(fopt -> fopt.map(this::parseCacheFile).orElse(Futures.of(SharedWithState.empty()))
+                );
     }
 
     private CompletableFuture<Pair<FileWrapper, SharedWithState>> retrieveWithFileOrCreate(Path dir) {
@@ -157,7 +147,8 @@ public class SharedWithCache {
     }
 
     private List<String> toList(Path p) {
-        return Arrays.asList(p.toString().split("/"));
+        return Arrays.asList(p.toString().split("/"))
+                .stream().filter(s -> s.length() > 0).collect(Collectors.toList());
     }
 
     private CompletableFuture<SharedWithState> parseCacheFile(FileWrapper cache) {

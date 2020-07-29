@@ -1,8 +1,6 @@
 package peergos.shared.user;
 
 import java.io.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.logging.*;
 
 import peergos.shared.fingerprint.*;
@@ -24,6 +22,7 @@ import peergos.shared.storage.*;
 import peergos.shared.user.fs.*;
 import peergos.shared.util.*;
 
+import java.nio.file.*;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -1652,7 +1651,6 @@ public class UserContext {
     }
 
     public CompletableFuture<Optional<FileWrapper>> getByPath(Path path) {
-        System.out.println("KEV-getByPath path=" + path);
         return getByPath(path.toString());
     }
 
