@@ -1349,6 +1349,9 @@ public class UserContext {
         }
     }
     public CompletableFuture<Boolean> shareReadAccessWith(Path path, Set<String> readersToAdd) {
+        if (readersToAdd.isEmpty()) {
+            return Futures.of(true);
+        }
         return getByPath(path.toString())
                 .thenCompose(file -> shareReadAccessWithAll(file.orElseThrow(() ->
                         new IllegalStateException("Could not find path " + path.toString())), path, readersToAdd));
@@ -1447,6 +1450,9 @@ public class UserContext {
     }
 
     public CompletableFuture<Boolean> sendWriteCapToAll(Path toFile, Set<String> writersToAdd) {
+        if (writersToAdd.isEmpty()) {
+            return Futures.of(true);
+        }
         System.out.println("Resharing WRITE cap to " + toFile + " with " + writersToAdd);
         return getByPath(toFile.getParent())
                 .thenCompose(parent -> getByPath(toFile)

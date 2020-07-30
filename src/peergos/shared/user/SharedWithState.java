@@ -66,11 +66,15 @@ public class SharedWithState implements Cborable {
         }
 
         if (access == SharedWithCache.Access.READ) {
-            newReads.putIfAbsent(filename, new HashSet<>());
-            newReads.get(filename).addAll(names);
+            if (! names.isEmpty()) {
+                newReads.putIfAbsent(filename, new HashSet<>());
+                newReads.get(filename).addAll(names);
+            }
         } else if (access == SharedWithCache.Access.WRITE) {
-            newWrites.putIfAbsent(filename, new HashSet<>());
-            newWrites.get(filename).addAll(names);
+            if (! names.isEmpty()) {
+                newWrites.putIfAbsent(filename, new HashSet<>());
+                newWrites.get(filename).addAll(names);
+            }
         }
 
         return new SharedWithState(newReads, newWrites);
