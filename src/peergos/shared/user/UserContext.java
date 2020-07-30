@@ -1322,32 +1322,6 @@ public class UserContext {
         return sharedWithCache.getDirSharingState(dir);
     }
 
-    @JsMethod
-    public static Path directoryToPath(String[] parts) {
-        if (parts == null || parts.length == 0) {
-            throw new IllegalArgumentException("Invalid params");
-        }else if (parts.length == 1) {
-            return Paths.get(parts[0]);
-        } else {
-            List<String> pathFragments = Stream.of(parts).skip(1).collect(Collectors.toList());
-            String[] remainder = pathFragments.toArray(new String[1]);
-            return Paths.get(parts[0], remainder);
-        }
-    }
-
-    @JsMethod
-    public static Path toPath(String[] parts, String filename) {
-        if (parts == null || parts.length == 0 || filename == null) {
-            throw new IllegalArgumentException("Invalid params");
-        }else if (parts.length == 1) {
-            return Paths.get(parts[0], filename);
-        } else {
-            List<String> pathFragments = Stream.of(parts).skip(1).collect(Collectors.toList());
-            pathFragments.add(filename);
-            String[] remainder = pathFragments.toArray(new String[1]);
-            return Paths.get(parts[0], remainder);
-        }
-    }
     public CompletableFuture<Boolean> shareReadAccessWith(Path path, Set<String> readersToAdd) {
         if (readersToAdd.isEmpty()) {
             return Futures.of(true);
